@@ -190,7 +190,7 @@ Stirling-PDF currently supports 36 languages!
 
 | Language                                     | Progress                               |
 | -------------------------------------------- | -------------------------------------- |
-| Arabic (العربية) (ar_AR)                     | ![97%](https://geps.dev/progress/97)   |
+| Arabic (العربية) (ar_AR)                     | ![100%](https://geps.dev/progress/100)   |
 | Basque (Euskara) (eu_ES)                     | ![55%](https://geps.dev/progress/55)   |
 | Bulgarian (Български) (bg_BG)                | ![96%](https://geps.dev/progress/96)   |
 | Catalan (Català) (ca_CA)                     | ![90%](https://geps.dev/progress/90)   |
