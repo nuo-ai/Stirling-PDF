@@ -7,19 +7,19 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Service;
 
+import lombok.extern.slf4j.Slf4j;
 import stirling.software.SPDF.model.ApplicationProperties;
 
 @Service
+@Slf4j
 @DependsOn({"bookAndHtmlFormatsInstalled"})
 public class EndpointConfiguration {
-    private static final Logger logger = LoggerFactory.getLogger(EndpointConfiguration.class);
+
     private Map<String, Boolean> endpointStatuses = new ConcurrentHashMap<>();
     private Map<String, Set<String>> endpointGroups = new ConcurrentHashMap<>();
 
@@ -43,7 +43,7 @@ public class EndpointConfiguration {
 
     public void disableEndpoint(String endpoint) {
         if (!endpointStatuses.containsKey(endpoint) || endpointStatuses.get(endpoint) != false) {
-            logger.debug("Disabling {}", endpoint);
+            log.debug("Disabling {}", endpoint);
             endpointStatuses.put(endpoint, false);
         }
     }
@@ -87,7 +87,7 @@ public class EndpointConfiguration {
                         .collect(Collectors.toList());
 
         if (!disabledList.isEmpty()) {
-            logger.info(
+            log.info(
                     "Total disabled endpoints: {}. Disabled endpoints: {}",
                     disabledList.size(),
                     String.join(", ", disabledList));
@@ -188,7 +188,7 @@ public class EndpointConfiguration {
         addEndpointToGroup("OpenCV", "extract-image-scans");
 
         // LibreOffice
-        addEndpointToGroup("LibreOffice", "repair");
+        addEndpointToGroup("qpdf", "repair");
         addEndpointToGroup("LibreOffice", "file-to-pdf");
         addEndpointToGroup("LibreOffice", "pdf-to-word");
         addEndpointToGroup("LibreOffice", "pdf-to-presentation");
@@ -199,10 +199,11 @@ public class EndpointConfiguration {
         // Unoconv
         addEndpointToGroup("Unoconv", "file-to-pdf");
 
-        // OCRmyPDF
-        addEndpointToGroup("OCRmyPDF", "compress-pdf");
-        addEndpointToGroup("OCRmyPDF", "pdf-to-pdfa");
-        addEndpointToGroup("OCRmyPDF", "ocr-pdf");
+        // qpdf
+        addEndpointToGroup("qpdf", "compress-pdf");
+        addEndpointToGroup("qpdf", "pdf-to-pdfa");
+
+        addEndpointToGroup("tesseract", "ocr-pdf");
 
         // Java
         addEndpointToGroup("Java", "merge-pdfs");
@@ -248,10 +249,10 @@ public class EndpointConfiguration {
         addEndpointToGroup("Javascript", "compare");
         addEndpointToGroup("Javascript", "adjust-contrast");
 
-        // Ghostscript dependent endpoints
-        addEndpointToGroup("Ghostscript", "compress-pdf");
-        addEndpointToGroup("Ghostscript", "pdf-to-pdfa");
-        addEndpointToGroup("Ghostscript", "repair");
+        // qpdf dependent endpoints
+        addEndpointToGroup("qpdf", "compress-pdf");
+        addEndpointToGroup("qpdf", "pdf-to-pdfa");
+        addEndpointToGroup("qpdf", "repair");
 
         // Weasyprint dependent endpoints
         addEndpointToGroup("Weasyprint", "html-to-pdf");
@@ -259,6 +260,9 @@ public class EndpointConfiguration {
 
         // Pdftohtml dependent endpoints
         addEndpointToGroup("Pdftohtml", "pdf-to-html");
+
+        // disabled for now while we resolve issues
+        disableEndpoint("pdf-to-pdfa");
     }
 
     private void processEnvironmentConfigs() {

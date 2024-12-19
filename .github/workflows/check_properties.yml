@@ -6,13 +6,9 @@ on:
     paths:
       - "src/main/resources/messages_*.properties"
   push:
+    branches: ["main"]
     paths:
       - "src/main/resources/messages_en_GB.properties"
-
-# Permissions required for the workflow
-permissions:
-  contents: write
-  pull-requests: write
 
 jobs:
   check-files:
@@ -54,10 +50,7 @@ jobs:
           echo "Getting list of changed files from PR..."
           gh pr view ${{ github.event.pull_request.number }} --json files -q ".files[].path" | grep -E '^src/main/resources/messages_[a-zA-Z_]+\.properties$' > ../changed_files.txt
           cd ..
-          echo "Setting branch path..."
-          BRANCH_PATH="pr-branch"
 
-          echo "BRANCH_PATH=${BRANCH_PATH}" >> $GITHUB_ENV
           echo "Processing changed files..."
           mapfile -t CHANGED_FILES < changed_files.txt
 
@@ -65,7 +58,6 @@ jobs:
           echo "CHANGED_FILES=${CHANGED_FILES_STR}" >> $GITHUB_ENV
 
           echo "Changed files: ${CHANGED_FILES_STR}"
-          echo "Branch: ${BRANCH_PATH}"
 
       - name: Determine reference file
         id: determine-file
@@ -89,30 +81,38 @@ jobs:
           python main-branch/.github/scripts/check_language_properties.py \
             --actor ${{ github.event.pull_request.user.login }} \
             --reference-file "${REFERENCE_FILE}" \
-            --branch "${BRANCH_PATH}" \
-            --files ${CHANGED_FILES} > failure.txt || true
+            --branch pr-branch \
+            --files "${CHANGED_FILES[@]}" > result.txt || true
 
       - name: Capture output
         id: capture-output
         run: |
-          if [ -f failure.txt ] && [ -s failure.txt ]; then
-            echo "Test failed, capturing output..."
-            ERROR_OUTPUT=$(cat failure.txt)
-            echo "ERROR_OUTPUT<<EOF" >> $GITHUB_ENV
-            echo "$ERROR_OUTPUT" >> $GITHUB_ENV
+          if [ -f result.txt ] && [ -s result.txt ]; then
+            echo "Test, capturing output..."
+            SCRIPT_OUTPUT=$(cat result.txt)
+            echo "SCRIPT_OUTPUT<<EOF" >> $GITHUB_ENV
+            echo "$SCRIPT_OUTPUT" >> $GITHUB_ENV
             echo "EOF" >> $GITHUB_ENV
-            echo "${ERROR_OUTPUT}"
+            echo "${SCRIPT_OUTPUT}"
+
+            # Set FAIL_JOB to true if SCRIPT_OUTPUT contains ❌
+            if [[ "$SCRIPT_OUTPUT" == *"❌"* ]]; then
+              echo "FAIL_JOB=true" >> $GITHUB_ENV
+            else
+              echo "FAIL_JOB=false" >> $GITHUB_ENV
+            fi
           else
-            echo "No errors found."
-            echo "ERROR_OUTPUT=" >> $GITHUB_ENV
+            echo "No update found."
+            echo "SCRIPT_OUTPUT=" >> $GITHUB_ENV
+            echo "FAIL_JOB=false" >> $GITHUB_ENV
           fi
 
       - name: Post comment on PR
-        if: env.ERROR_OUTPUT != ''
+        if: env.SCRIPT_OUTPUT != ''
         uses: actions/github-script@v7
         with:
           script: |
-            const { GITHUB_REPOSITORY, ERROR_OUTPUT } = process.env;
+            const { GITHUB_REPOSITORY, SCRIPT_OUTPUT } = process.env;
             const [repoOwner, repoName] = GITHUB_REPOSITORY.split('/');
             const prNumber = context.issue.number;
 
@@ -134,7 +134,7 @@ jobs:
                 owner: repoOwner,
                 repo: repoName,
                 comment_id: comment.id,
-                body: `## 🚀 Translation Verification Summary\n\n\n${ERROR_OUTPUT}\n`
+                body: `## 🚀 Translation Verification Summary\n\n\n${SCRIPT_OUTPUT}\n`
               });
               console.log("Updated existing comment.");
             } else if (!comment) {
@@ -143,33 +143,24 @@ jobs:
                 owner: repoOwner,
                 repo: repoName,
                 issue_number: prNumber,
-                body: `## 🚀 Translation Verification Summary\n\n\n${ERROR_OUTPUT}\n`
+                body: `## 🚀 Translation Verification Summary\n\n\n${SCRIPT_OUTPUT}\n`
               });
               console.log("Created new comment.");
             } else {
               console.log("Comment update attempt denied. Actor does not match.");
             }
 
-      # - name: Set up git config
-      #   run: |
-      #     git config --global user.name "github-actions[bot]"
-      #     git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-      # - name: Add translation keys
-      #   run: |
-      #     cd ${{ env.BRANCH_PATH }}
-      #     git add src/main/resources/messages_*.properties
-      #     git diff --staged --quiet || echo "CHANGES_DETECTED=true" >> $GITHUB_ENV
-      #     git commit -m "Update translation files" || echo "No changes to commit"
-      # - name: Push
-      #   if: env.CHANGES_DETECTED == 'true'
-      #   run: |
-      #     cd pr-branch
-      #     git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.event.pull_request.head.repo.full_name }}.git
-      #     git push origin ${{ github.head_ref }} || echo "Push failed: possibly no changes to push"
+      - name: Fail job if errors found
+        if: env.FAIL_JOB == 'true'
+        run: |
+          echo "Failing the job because errors were detected."
+          exit 1
 
   update-translations-main:
     if: github.event_name == 'push'
+    permissions:
+      contents: write
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -210,6 +201,8 @@ jobs:
           signoff: true
           branch: update_translation_files
           title: "Update translation files"
+          add-paths: |
+            src/main/resources/messages_*.properties
           body: |
             Auto-generated by [create-pull-request][1]
 
