@@ -1,5 +1,5 @@
 # Main stage
-FROM alpine:3.20.3
+FROM alpine:3.20.3@sha256:1e42bbe2508154c9126d48c2b8a75420c3544343bf86fd041fb7527e017a4b4a
 
 # Copy necessary files
 COPY scripts /scripts
@@ -30,6 +30,7 @@ RUN echo "@testing https://dl-cdn.alpinelinux.org/alpine/edge/main" | tee -a /et
         tini \
         bash \
         curl \
+        qpdf \
         shadow \
         su-exec \
         openssl \
@@ -40,7 +41,6 @@ RUN echo "@testing https://dl-cdn.alpinelinux.org/alpine/edge/main" | tee -a /et
 # pdftohtml
         poppler-utils \
 # OCR MY PDF (unpaper for descew and other advanced features)
-        ocrmypdf \
         tesseract-ocr-data-eng \
 # CV
         py3-opencv \

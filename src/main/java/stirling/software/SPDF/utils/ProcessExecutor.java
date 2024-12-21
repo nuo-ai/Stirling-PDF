@@ -13,28 +13,25 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.github.pixee.security.BoundedLineReader;
 
+import lombok.extern.slf4j.Slf4j;
 import stirling.software.SPDF.model.ApplicationProperties;
 
+@Slf4j
 public class ProcessExecutor {
-
-    private static final Logger logger = LoggerFactory.getLogger(ProcessExecutor.class);
 
     private static ApplicationProperties applicationProperties = new ApplicationProperties();
 
     public enum Processes {
         LIBRE_OFFICE,
         PDFTOHTML,
-        OCR_MY_PDF,
         PYTHON_OPENCV,
-        GHOSTSCRIPT,
         WEASYPRINT,
         INSTALL_APP,
-        CALIBRE
+        CALIBRE,
+        TESSERACT,
+        QPDF
     }
 
     private static final Map<Processes, ProcessExecutor> instances = new ConcurrentHashMap<>();
@@ -59,21 +56,11 @@ public class ProcessExecutor {
                                                 .getProcessExecutor()
                                                 .getSessionLimit()
                                                 .getPdfToHtmlSessionLimit();
-                                case OCR_MY_PDF ->
-                                        applicationProperties
-                                                .getProcessExecutor()
-                                                .getSessionLimit()
-                                                .getOcrMyPdfSessionLimit();
                                 case PYTHON_OPENCV ->
                                         applicationProperties
                                                 .getProcessExecutor()
                                                 .getSessionLimit()
                                                 .getPythonOpenCvSessionLimit();
-                                case GHOSTSCRIPT ->
-                                        applicationProperties
-                                                .getProcessExecutor()
-                                                .getSessionLimit()
-                                                .getGhostScriptSessionLimit();
                                 case WEASYPRINT ->
                                         applicationProperties
                                                 .getProcessExecutor()
@@ -84,6 +71,16 @@ public class ProcessExecutor {
                                                 .getProcessExecutor()
                                                 .getSessionLimit()
                                                 .getInstallAppSessionLimit();
+                                case TESSERACT ->
+                                        applicationProperties
+                                                .getProcessExecutor()
+                                                .getSessionLimit()
+                                                .getTesseractSessionLimit();
+                                case QPDF ->
+                                        applicationProperties
+                                                .getProcessExecutor()
+                                                .getSessionLimit()
+                                                .getQpdfSessionLimit();
                                 case CALIBRE ->
                                         applicationProperties
                                                 .getProcessExecutor()
@@ -103,21 +100,11 @@ public class ProcessExecutor {
                                                 .getProcessExecutor()
                                                 .getTimeoutMinutes()
                                                 .getPdfToHtmlTimeoutMinutes();
-                                case OCR_MY_PDF ->
-                                        applicationProperties
-                                                .getProcessExecutor()
-                                                .getTimeoutMinutes()
-                                                .getOcrMyPdfTimeoutMinutes();
                                 case PYTHON_OPENCV ->
                                         applicationProperties
                                                 .getProcessExecutor()
                                                 .getTimeoutMinutes()
                                                 .getPythonOpenCvTimeoutMinutes();
-                                case GHOSTSCRIPT ->
-                                        applicationProperties
-                                                .getProcessExecutor()
-                                                .getTimeoutMinutes()
-                                                .getGhostScriptTimeoutMinutes();
                                 case WEASYPRINT ->
                                         applicationProperties
                                                 .getProcessExecutor()
@@ -128,6 +115,16 @@ public class ProcessExecutor {
                                                 .getProcessExecutor()
                                                 .getTimeoutMinutes()
                                                 .getInstallAppTimeoutMinutes();
+                                case TESSERACT ->
+                                        applicationProperties
+                                                .getProcessExecutor()
+                                                .getTimeoutMinutes()
+                                                .getTesseractTimeoutMinutes();
+                                case QPDF ->
+                                        applicationProperties
+                                                .getProcessExecutor()
+                                                .getTimeoutMinutes()
+                                                .getQpdfTimeoutMinutes();
                                 case CALIBRE ->
                                         applicationProperties
                                                 .getProcessExecutor()
@@ -160,7 +157,7 @@ public class ProcessExecutor {
         semaphore.acquire();
         try {
 
-            logger.info("Running command: " + String.join(" ", command));
+            log.info("Running command: " + String.join(" ", command));
             ProcessBuilder processBuilder = new ProcessBuilder(command);
 
             // Use the working directory if it's set
@@ -187,13 +184,12 @@ public class ProcessExecutor {
                                                             errorReader, 5_000_000))
                                             != null) {
                                         errorLines.add(line);
-                                        if (liveUpdates) logger.info(line);
+                                        if (liveUpdates) log.info(line);
                                     }
                                 } catch (InterruptedIOException e) {
-                                    logger.warn(
-                                            "Error reader thread was interrupted due to timeout.");
+                                    log.warn("Error reader thread was interrupted due to timeout.");
                                 } catch (IOException e) {
-                                    logger.error("exception", e);
+                                    log.error("exception", e);
                                 }
                             });
 
@@ -211,13 +207,12 @@ public class ProcessExecutor {
                                                             outputReader, 5_000_000))
                                             != null) {
                                         outputLines.add(line);
-                                        if (liveUpdates) logger.info(line);
+                                        if (liveUpdates) log.info(line);
                                     }
                                 } catch (InterruptedIOException e) {
-                                    logger.warn(
-                                            "Error reader thread was interrupted due to timeout.");
+                                    log.warn("Error reader thread was interrupted due to timeout.");
                                 } catch (IOException e) {
-                                    logger.error("exception", e);
+                                    log.error("exception", e);
                                 }
                             });
 
@@ -244,7 +239,7 @@ public class ProcessExecutor {
                 String outputMessage = String.join("\n", outputLines);
                 messages += outputMessage;
                 if (!liveUpdates) {
-                    logger.info("Command output:\n" + outputMessage);
+                    log.info("Command output:\n" + outputMessage);
                 }
             }
 
@@ -252,7 +247,7 @@ public class ProcessExecutor {
                 String errorMessage = String.join("\n", errorLines);
                 messages += errorMessage;
                 if (!liveUpdates) {
-                    logger.warn("Command error output:\n" + errorMessage);
+                    log.warn("Command error output:\n" + errorMessage);
                 }
                 if (exitCode != 0) {
                     throw new IOException(

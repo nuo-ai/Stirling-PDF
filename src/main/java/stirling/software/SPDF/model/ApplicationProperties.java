@@ -73,6 +73,7 @@ public class ApplicationProperties {
         private int loginAttemptCount;
         private long loginResetTimeMinutes;
         private String loginMethod = "all";
+        private String customGlobalAPIKey;
 
         public Boolean isAltLogin() {
             return saml2.getEnabled() || oauth2.getEnabled();
@@ -121,18 +122,19 @@ public class ApplicationProperties {
 
         @Getter
         @Setter
+        @ToString
         public static class SAML2 {
             private Boolean enabled = false;
             private Boolean autoCreateUser = false;
             private Boolean blockRegistration = false;
             private String registrationId = "stirling";
-            private String idpMetadataUri;
+            @ToString.Exclude private String idpMetadataUri;
             private String idpSingleLogoutUrl;
             private String idpSingleLoginUrl;
             private String idpIssuer;
             private String idpCert;
-            private String privateKey;
-            private String spCert;
+            @ToString.Exclude private String privateKey;
+            @ToString.Exclude private String spCert;
 
             public InputStream getIdpMetadataUri() throws IOException {
                 if (idpMetadataUri.startsWith("classpath:")) {
@@ -285,6 +287,7 @@ public class ApplicationProperties {
     public static class AutomaticallyGenerated {
         @ToString.Exclude private String key;
         private String UUID;
+        private String appVersion;
     }
 
     @Data
@@ -320,12 +323,20 @@ public class ApplicationProperties {
         public static class SessionLimit {
             private int libreOfficeSessionLimit;
             private int pdfToHtmlSessionLimit;
-            private int ocrMyPdfSessionLimit;
             private int pythonOpenCvSessionLimit;
-            private int ghostScriptSessionLimit;
             private int weasyPrintSessionLimit;
             private int installAppSessionLimit;
             private int calibreSessionLimit;
+            private int qpdfSessionLimit;
+            private int tesseractSessionLimit;
+
+            public int getQpdfSessionLimit() {
+                return qpdfSessionLimit > 0 ? qpdfSessionLimit : 2;
+            }
+
+            public int getTesseractSessionLimit() {
+                return tesseractSessionLimit > 0 ? tesseractSessionLimit : 1;
+            }
 
             public int getLibreOfficeSessionLimit() {
                 return libreOfficeSessionLimit > 0 ? libreOfficeSessionLimit : 1;
@@ -335,16 +346,8 @@ public class ApplicationProperties {
                 return pdfToHtmlSessionLimit > 0 ? pdfToHtmlSessionLimit : 1;
             }
 
-            public int getOcrMyPdfSessionLimit() {
-                return ocrMyPdfSessionLimit > 0 ? ocrMyPdfSessionLimit : 2;
-            }
-
             public int getPythonOpenCvSessionLimit() {
                 return pythonOpenCvSessionLimit > 0 ? pythonOpenCvSessionLimit : 8;
-            }
-
-            public int getGhostScriptSessionLimit() {
-                return ghostScriptSessionLimit > 0 ? ghostScriptSessionLimit : 16;
             }
 
             public int getWeasyPrintSessionLimit() {
@@ -364,12 +367,20 @@ public class ApplicationProperties {
         public static class TimeoutMinutes {
             private long libreOfficeTimeoutMinutes;
             private long pdfToHtmlTimeoutMinutes;
-            private long ocrMyPdfTimeoutMinutes;
             private long pythonOpenCvTimeoutMinutes;
-            private long ghostScriptTimeoutMinutes;
             private long weasyPrintTimeoutMinutes;
             private long installAppTimeoutMinutes;
             private long calibreTimeoutMinutes;
+            private long tesseractTimeoutMinutes;
+            private long qpdfTimeoutMinutes;
+
+            public long getTesseractTimeoutMinutes() {
+                return tesseractTimeoutMinutes > 0 ? tesseractTimeoutMinutes : 30;
+            }
+
+            public long getQpdfTimeoutMinutes() {
+                return qpdfTimeoutMinutes > 0 ? qpdfTimeoutMinutes : 30;
+            }
 
             public long getLibreOfficeTimeoutMinutes() {
                 return libreOfficeTimeoutMinutes > 0 ? libreOfficeTimeoutMinutes : 30;
@@ -379,16 +390,8 @@ public class ApplicationProperties {
                 return pdfToHtmlTimeoutMinutes > 0 ? pdfToHtmlTimeoutMinutes : 20;
             }
 
-            public long getOcrMyPdfTimeoutMinutes() {
-                return ocrMyPdfTimeoutMinutes > 0 ? ocrMyPdfTimeoutMinutes : 30;
-            }
-
             public long getPythonOpenCvTimeoutMinutes() {
                 return pythonOpenCvTimeoutMinutes > 0 ? pythonOpenCvTimeoutMinutes : 30;
-            }
-
-            public long getGhostScriptTimeoutMinutes() {
-                return ghostScriptTimeoutMinutes > 0 ? ghostScriptTimeoutMinutes : 30;
             }
 
             public long getWeasyPrintTimeoutMinutes() {
